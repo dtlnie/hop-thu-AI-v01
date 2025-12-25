@@ -4,8 +4,18 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Cho phép mã nguồn truy cập process.env (đặc biệt là API_KEY từ Vercel)
+    'process.env': process.env
+  },
   build: {
     outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      },
+    },
   },
   server: {
     port: 3000,
