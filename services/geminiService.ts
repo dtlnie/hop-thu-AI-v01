@@ -1,12 +1,14 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
-import { PersonaType, RiskLevel } from "../types";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { PersonaType, RiskLevel, UserMemory } from "../types";
 import { SYSTEM_PROMPT, PERSONAS } from "../constants";
 
-export const getGeminiResponse = async (
+export const getGeminiStreamResponse = async (
   message: string, 
   personaId: PersonaType, 
   history: {role: string, content: string}[],
+  userMemory: string,
+  onChunk: (text: string) => void,
   signal?: AbortSignal
 ) => {
   try {
@@ -15,9 +17,10 @@ export const getGeminiResponse = async (
     
     const dynamicPrompt = SYSTEM_PROMPT
       .replace("{persona_name}", persona?.name || "")
-      .replace("{persona_role}", persona?.role || "");
+      .replace("{persona_role}", persona?.role || "")
+      .replace("{user_memory}", userMemory || "Chưa có thông tin cũ.");
 
-    const response = await ai.models.generateContent({
+    const stream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
       contents: [
         ...history.map(h => ({ 
@@ -29,30 +32,40 @@ export const getGeminiResponse = async (
       config: {
         systemInstruction: dynamicPrompt,
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            reply: { type: Type.STRING },
-            riskLevel: { type: Type.STRING, enum: Object.values(RiskLevel) },
-            reason: { type: Type.STRING },
-            detectedEmotion: { type: Type.STRING }
-          },
-          required: ["reply", "riskLevel", "reason", "detectedEmotion"]
-        }
+        // Tối ưu tốc độ: Không đặt thinkingBudget quá cao để flash xử lý tức thì
+        thinkingConfig: { thinkingBudget: 0 } 
       }
-    }, { signal }); // Truyền signal vào đây để có thể hủy
+    }, { signal });
 
-    return JSON.parse(response.text || "{}");
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.log('Request was cancelled by user');
-      throw error;
+    let fullText = "";
+    for await (const chunk of stream) {
+      const text = (chunk as GenerateContentResponse).text;
+      if (text) {
+        fullText += text;
+        // Vì API trả về JSON, chúng ta cần đợi đến khi hoàn thành để parse
+        // Nhưng nếu muốn stream text thô, chúng ta sẽ cần refactor prompt.
+        // Ở đây để đảm bảo tính năng rủi ro, ta vẫn xử lý JSON khi kết thúc.
+      }
     }
+
+    try {
+      const parsed = JSON.parse(fullText);
+      return parsed;
+    } catch (e) {
+      // Fallback nếu JSON bị lỗi do stream ngắt quãng
+      return {
+        reply: fullText || "Mình đang suy nghĩ một chút, bạn chờ tí nhé.",
+        riskLevel: RiskLevel.GREEN,
+        new_insights: ""
+      };
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError') throw error;
     console.error("Gemini Error:", error);
     return {
-      reply: "Mình đang gặp chút sự cố kết nối, bạn chờ mình xíu nhé!",
+      reply: "Có chút trục trặc nhỏ, mình vẫn ở đây lắng nghe bạn nè.",
       riskLevel: RiskLevel.GREEN,
-      reason: "API Error"
+      new_insights: ""
     };
   }
 };

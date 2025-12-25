@@ -15,6 +15,11 @@ export interface User {
   avatar: string;
 }
 
+export interface UserMemory {
+  insights: string; // Tóm tắt đặc điểm tâm lý, sự kiện quan trọng
+  lastUpdated: number;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -23,7 +28,6 @@ export interface Message {
   riskLevel?: RiskLevel;
 }
 
-// Cấu trúc mới: Lưu trữ tin nhắn theo từng PersonaId
 export interface ChatState {
   [key: string]: Message[];
 }
