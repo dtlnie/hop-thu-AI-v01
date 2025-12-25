@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { motion } from 'framer-motion';
-import { LogIn, UserPlus, ShieldCheck } from 'lucide-react';
+import { LogIn, UserPlus, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface AuthPageProps {
   onAuth: (user: User) => void;
@@ -15,26 +15,36 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [error, setError] = useState('');
 
+  // Đảm bảo spss_all_users luôn tồn tại dưới dạng mảng
+  const getUsers = (): any[] => {
+    try {
+      const data = localStorage.getItem('spss_all_users');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!username || !password) {
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!normalizedUsername || !password) {
       setError('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    const usersStr = localStorage.getItem('spss_all_users') || '[]';
-    const users = JSON.parse(usersStr);
+    const users = getUsers();
 
     if (isLogin) {
-      const foundUser = users.find((u: any) => u.username === username && u.password === password);
+      const foundUser = users.find((u: any) => u.username.toLowerCase() === normalizedUsername && u.password === password);
       if (foundUser) {
         const userData: User = {
           id: foundUser.id,
           username: foundUser.username,
           role: foundUser.role,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${foundUser.username}`
+          avatar: foundUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${foundUser.username}`
         };
         localStorage.setItem('spss_user', JSON.stringify(userData));
         onAuth(userData);
@@ -42,24 +52,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         setError('Tài khoản hoặc mật khẩu không chính xác');
       }
     } else {
-      if (users.some((u: any) => u.username === username)) {
-        setError('Tên đăng nhập đã tồn tại');
+      if (users.some((u: any) => u.username.toLowerCase() === normalizedUsername)) {
+        setError('Tên đăng nhập này đã có người sử dụng');
         return;
       }
+      
       const newUser = {
         id: Math.random().toString(36).substr(2, 9),
-        username,
+        username: username.trim(),
         password,
-        role
+        role,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username.trim()}`
       };
-      users.push(newUser);
-      localStorage.setItem('spss_all_users', JSON.stringify(users));
+      
+      const updatedUsers = [...users, newUser];
+      localStorage.setItem('spss_all_users', JSON.stringify(updatedUsers));
       
       const userData: User = {
         id: newUser.id,
         username: newUser.username,
         role: newUser.role,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newUser.username}`
+        avatar: newUser.avatar
       };
       localStorage.setItem('spss_user', JSON.stringify(userData));
       onAuth(userData);
@@ -71,90 +84,91 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl"
+        className="glass w-full max-w-md p-6 sm:p-8 rounded-[32px] shadow-2xl border-white/50"
       >
-        <div className="flex flex-col items-center mb-6">
-          <div className="bg-indigo-600 p-3 rounded-2xl text-white mb-3 shadow-lg">
-            <ShieldCheck size={28} />
+        <div className="flex flex-col items-center mb-8">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-4 rounded-2xl text-white mb-4 shadow-xl">
+            <ShieldCheck size={32} />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-indigo-900 text-center">
-            {isLogin ? 'Chào mừng trở lại!' : 'Tham gia cùng chúng mình'}
+          <h2 className="text-2xl font-black text-indigo-950 text-center tracking-tight">
+            {isLogin ? 'Chào mừng bạn!' : 'Tạo tài khoản mới'}
           </h2>
-          <p className="text-indigo-500 text-xs mt-1">Hệ thống hỗ trợ tâm lý học đường</p>
+          <p className="text-indigo-500 text-xs font-bold mt-2 uppercase tracking-widest">Hệ thống hỗ trợ tâm lý Pskhi</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1 tracking-wider">Tên đăng nhập</label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Tên đăng nhập</label>
             <input 
               type="text" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white border-2 border-indigo-50 focus:border-indigo-500 focus:ring-0 transition outline-none text-indigo-950 font-bold shadow-sm placeholder:text-indigo-200"
-              placeholder="Nhập tên của bạn..."
+              className="w-full px-5 py-4 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 focus:bg-white transition-all outline-none text-indigo-950 font-bold placeholder:text-indigo-200"
+              placeholder="Ví dụ: hocsinh_a"
             />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1 tracking-wider">Mật khẩu</label>
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Mật khẩu</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white border-2 border-indigo-50 focus:border-indigo-500 focus:ring-0 transition outline-none text-indigo-950 font-bold shadow-sm placeholder:text-indigo-200"
+              className="w-full px-5 py-4 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 focus:bg-white transition-all outline-none text-indigo-950 font-bold placeholder:text-indigo-200"
               placeholder="••••••••"
             />
           </div>
 
           {!isLogin && (
-            <div>
-              <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1 tracking-wider">Bạn là...</label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Vai trò của bạn</label>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setRole('student')}
-                  className={`py-2.5 rounded-xl text-xs font-black transition ${role === 'student' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-100'}`}
+                  className={`py-3 rounded-2xl text-xs font-black transition-all ${role === 'student' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50'}`}
                 >
-                  Học sinh
+                  HỌC SINH
                 </button>
                 <button
                   type="button"
                   onClick={() => setRole('teacher')}
-                  className={`py-2.5 rounded-xl text-xs font-black transition ${role === 'teacher' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-amber-600 border border-amber-100'}`}
+                  className={`py-3 rounded-2xl text-xs font-black transition-all ${role === 'teacher' ? 'bg-amber-500 text-white shadow-lg' : 'bg-white text-amber-600 border border-amber-100 hover:bg-amber-50'}`}
                 >
-                  Giáo viên
+                  GIÁO VIÊN
                 </button>
               </div>
             </div>
           )}
 
           {error && (
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-rose-600 text-[11px] text-center font-black bg-rose-50 py-2 rounded-lg border border-rose-100"
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-rose-600 text-[11px] font-black bg-rose-50 p-4 rounded-2xl border border-rose-100"
             >
+              <AlertCircle size={16} />
               {error}
-            </motion.p>
+            </motion.div>
           )}
 
           <button 
             type="submit"
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-100 transition active:scale-95"
+            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all transform active:scale-[0.98]"
           >
-            {isLogin ? 'ĐĂNG NHẬP NGAY' : 'TẠO TÀI KHOẢN'}
+            {isLogin ? 'ĐĂNG NHẬP NGAY' : 'HOÀN TẤT ĐĂNG KÝ'}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center border-t border-indigo-50 pt-6">
           <button 
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="text-indigo-600 text-xs font-black hover:underline underline-offset-4"
+            className="text-indigo-600 text-xs font-black hover:text-indigo-800 transition-colors uppercase tracking-widest"
           >
-            {isLogin ? 'CHƯA CÓ TÀI KHOẢN? ĐĂNG KÝ' : 'ĐÃ CÓ TÀI KHOẢN? ĐĂNG NHẬP'}
+            {isLogin ? 'Bạn chưa có tài khoản? Đăng ký' : 'Bạn đã có tài khoản? Đăng nhập'}
           </button>
         </div>
       </motion.div>

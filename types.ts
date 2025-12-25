@@ -23,12 +23,9 @@ export interface Message {
   riskLevel?: RiskLevel;
 }
 
-export interface ChatSession {
-  id: string;
-  userId: string;
-  persona: PersonaType;
-  messages: Message[];
-  lastRiskLevel: RiskLevel;
+// Cấu trúc mới: Lưu trữ tin nhắn theo từng PersonaId
+export interface ChatState {
+  [key: string]: Message[];
 }
 
 export interface StudentAlert {
@@ -37,4 +34,5 @@ export interface StudentAlert {
   riskLevel: RiskLevel;
   lastMessage: string;
   timestamp: number;
+  personaUsed: string;
 }

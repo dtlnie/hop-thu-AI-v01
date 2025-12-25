@@ -1,13 +1,81 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import AuthPage from './components/AuthPage';
 import Chatbot from './components/Chatbot';
 import SafeCorner from './components/SafeCorner';
 import TeacherDashboard from './components/TeacherDashboard';
 import { User } from './types';
-import { Home, MessageSquare, ShieldCheck, BarChart3, LogOut } from 'lucide-react';
+import { Home, MessageSquare, ShieldCheck, BarChart3, LogOut, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const Navigation = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
+  const location = useLocation();
+  
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <motion.nav 
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="glass sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-md border-b border-white/20"
+    >
+      <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2 rounded-xl text-white shadow-lg">
+            <ShieldCheck size={22} />
+          </div>
+          <h1 className="font-black text-indigo-950 hidden sm:block tracking-tight text-xl">SmartStudent</h1>
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Link 
+          to="/" 
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/') ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-600 hover:bg-indigo-50'}`}
+        >
+          <MessageSquare size={18} />
+          <span className="hidden md:inline">Hỗ trợ AI</span>
+        </Link>
+        
+        <Link 
+          to="/safe-corner" 
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/safe-corner') ? 'bg-emerald-600 text-white shadow-lg' : 'text-emerald-700 hover:bg-emerald-50'}`}
+        >
+          <Heart size={18} />
+          <span className="hidden md:inline">Góc An Toàn</span>
+        </Link>
+
+        {user.role === 'teacher' && (
+          <Link 
+            to="/dashboard" 
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/dashboard') ? 'bg-amber-500 text-white shadow-lg' : 'text-amber-700 hover:bg-amber-50'}`}
+          >
+            <BarChart3 size={18} />
+            <span className="hidden md:inline">Dashboard</span>
+          </Link>
+        )}
+
+        <div className="h-6 w-px bg-indigo-100 mx-2 hidden sm:block"></div>
+
+        <div className="flex items-center gap-3 ml-2">
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[10px] font-black text-indigo-400 uppercase leading-none mb-1">{user.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}</span>
+            <span className="text-xs font-bold text-indigo-950 leading-none">{user.username}</span>
+          </div>
+          <img src={user.avatar} className="w-9 h-9 rounded-full border-2 border-indigo-200 shadow-sm" alt="avatar" />
+          <button 
+            onClick={onLogout}
+            className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+            title="Đăng xuất"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
+      </div>
+    </motion.nav>
+  );
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -28,58 +96,20 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-sky-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-50 to-emerald-50">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
+          <Heart className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600" size={20} />
+        </div>
+        <p className="mt-4 font-bold text-indigo-900 animate-pulse">Đang khởi tạo không gian an toàn...</p>
       </div>
     );
   }
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col">
-        <AnimatePresence mode="wait">
-          {user && (
-            <motion.nav 
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="glass sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm"
-            >
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                  <ShieldCheck size={20} />
-                </div>
-                <h1 className="font-bold text-indigo-900 hidden sm:block">SmartStudent</h1>
-              </div>
-
-              <div className="flex items-center gap-1 sm:gap-4">
-                <a href="#/" className="flex items-center gap-1 p-2 rounded-full hover:bg-white/50 text-indigo-700 transition">
-                  <MessageSquare size={18} />
-                  <span className="hidden md:inline text-sm font-medium">Hỗ trợ AI</span>
-                </a>
-                <a href="#/safe-corner" className="flex items-center gap-1 p-2 rounded-full hover:bg-white/50 text-emerald-700 transition">
-                  <ShieldCheck size={18} />
-                  <span className="hidden md:inline text-sm font-medium">Góc An Toàn</span>
-                </a>
-                {user.role === 'teacher' && (
-                  <a href="#/dashboard" className="flex items-center gap-1 p-2 rounded-full hover:bg-white/50 text-amber-700 transition">
-                    <BarChart3 size={18} />
-                    <span className="hidden md:inline text-sm font-medium">Dashboard</span>
-                  </a>
-                )}
-                <button 
-                  onClick={handleLogout}
-                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition"
-                >
-                  <LogOut size={18} />
-                </button>
-                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-indigo-100">
-                  <img src={user.avatar} className="w-8 h-8 rounded-full border-2 border-indigo-200" alt="avatar" />
-                  <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{user.username}</span>
-                </div>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
+      <div className="min-h-screen flex flex-col bg-fixed">
+        {user && <Navigation user={user} onLogout={handleLogout} />}
 
         <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
           <Routes>
@@ -91,8 +121,14 @@ const App: React.FC = () => {
           </Routes>
         </main>
 
-        <footer className="py-6 text-center text-indigo-400 text-xs border-t border-indigo-50/50">
-          <p>© 2024 Hệ Thống Tâm Lý Học Đường v1.0 • Bảo mật & Tin cậy</p>
+        <footer className="py-8 text-center border-t border-indigo-100 bg-white/30 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-indigo-400 text-xs font-bold">© 2024 Smart Student Psychological Support System • v1.2</p>
+            <div className="flex gap-6">
+              <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Bảo mật đa lớp</span>
+              <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">AI Tâm lý học chuyên sâu</span>
+            </div>
+          </div>
         </footer>
       </div>
     </Router>

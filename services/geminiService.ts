@@ -1,46 +1,58 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { PersonaType, RiskLevel } from "../types";
-import { SYSTEM_PROMPT } from "../constants";
-
-const API_KEY = process.env.API_KEY || "";
+import { SYSTEM_PROMPT, PERSONAS } from "../constants";
 
 export const getGeminiResponse = async (
   message: string, 
-  persona: PersonaType, 
-  history: {role: string, content: string}[]
+  personaId: PersonaType, 
+  history: {role: string, content: string}[],
+  signal?: AbortSignal
 ) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    const model = ai.models.generateContent({
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const persona = PERSONAS.find(p => p.id === personaId);
+    
+    const dynamicPrompt = SYSTEM_PROMPT
+      .replace("{persona_name}", persona?.name || "")
+      .replace("{persona_role}", persona?.role || "");
+
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
-        ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
-        { role: 'user', parts: [{ text: `Nhân vật: ${persona}. Tin nhắn của tôi: ${message}` }] }
+        ...history.map(h => ({ 
+          role: h.role === 'user' ? 'user' : 'model', 
+          parts: [{ text: h.content }] 
+        })),
+        { role: 'user', parts: [{ text: message }] }
       ],
       config: {
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: dynamicPrompt,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             reply: { type: Type.STRING },
             riskLevel: { type: Type.STRING, enum: Object.values(RiskLevel) },
-            reason: { type: Type.STRING }
+            reason: { type: Type.STRING },
+            detectedEmotion: { type: Type.STRING }
           },
-          required: ["reply", "riskLevel", "reason"]
+          required: ["reply", "riskLevel", "reason", "detectedEmotion"]
         }
       }
-    });
+    }, { signal }); // Truyền signal vào đây để có thể hủy
 
-    const result = await model;
-    return JSON.parse(result.text || "{}");
-  } catch (error) {
-    console.error("Gemini API Error:", error);
+    return JSON.parse(response.text || "{}");
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('Request was cancelled by user');
+      throw error;
+    }
+    console.error("Gemini Error:", error);
     return {
-      reply: "Xin lỗi, mình gặp một chút trục trặc kỹ thuật. Bạn có thể nói lại được không?",
+      reply: "Mình đang gặp chút sự cố kết nối, bạn chờ mình xíu nhé!",
       riskLevel: RiskLevel.GREEN,
-      reason: "Error connection"
+      reason: "API Error"
     };
   }
 };
