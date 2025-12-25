@@ -12,8 +12,12 @@ export const getGeminiStreamResponse = async (
   signal?: AbortSignal
 ) => {
   try {
-    // Khởi tạo SDK theo chuẩn mới nhất
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("API_KEY_MISSING");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const persona = PERSONAS.find(p => p.id === personaId);
     
     const dynamicPrompt = SYSTEM_PROMPT
@@ -21,11 +25,10 @@ export const getGeminiStreamResponse = async (
       .replace("{persona_role}", persona?.role || "")
       .replace("{user_memory}", userMemory || "Chưa có dữ liệu cũ.");
 
-    // Sử dụng model 'gemini-3-flash-preview' cho các tác vụ text nhanh
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
-        ...history.slice(-4).map(h => ({ 
+        ...history.slice(-6).map(h => ({ 
           role: h.role === 'user' ? 'user' : 'model', 
           parts: [{ text: h.content }] 
         })),
@@ -40,11 +43,11 @@ export const getGeminiStreamResponse = async (
     const fullText = response.text || "";
     
     try {
-      // Làm sạch dữ liệu rác nếu có
+      // Loại bỏ các ký tự markdown JSON nếu AI trả về nhầm định dạng
       const cleanJson = fullText.replace(/```json/g, "").replace(/```/g, "").trim();
       return JSON.parse(cleanJson);
     } catch (e) {
-      console.warn("Dữ liệu trả về không phải JSON chuẩn:", fullText);
+      console.warn("Dữ liệu trả về không phải JSON chuẩn, cố gắng trích xuất text...");
       return {
         reply: fullText || "Mình đang ở đây lắng nghe bạn.",
         riskLevel: RiskLevel.GREEN,
@@ -53,13 +56,21 @@ export const getGeminiStreamResponse = async (
     }
   } catch (error: any) {
     console.error("Lỗi Gemini API:", error);
-    // Nếu lỗi 404 hoặc 403, có thể do model hoặc API key
-    if (error.message?.includes("not found")) {
+    
+    if (error.message === "API_KEY_MISSING") {
       return {
-        reply: "Hệ thống đang bảo trì Model, bạn quay lại sau nhé!",
+        reply: "Hệ thống chưa cấu hình API Key. Vui lòng kiểm tra lại cài đặt môi trường!",
         riskLevel: RiskLevel.GREEN
       };
     }
+
+    if (error.message?.includes("404") || error.message?.includes("not found")) {
+      return {
+        reply: "Mô hình AI đang bận hoặc đang được cập nhật. Bạn thử lại sau ít phút nhé!",
+        riskLevel: RiskLevel.GREEN
+      };
+    }
+
     throw error;
   }
 };

@@ -71,10 +71,12 @@ const Chatbot: React.FC<ChatbotProps> = ({ user }) => {
     abortControllerRef.current = controller;
 
     try {
+      const historyForAI = (chatHistory[selectedPersona] || []).slice(-6).map(m => ({ role: m.role, content: m.content }));
+      
       const response = await getGeminiStreamResponse(
         text, 
         selectedPersona, 
-        (chatHistory[selectedPersona] || []).slice(-4).map(m => ({ role: m.role, content: m.content })), 
+        historyForAI, 
         userMemory.insights,
         () => {},
         controller.signal
@@ -92,7 +94,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ user }) => {
 
       if (response.new_insights) {
         setUserMemory(prev => ({
-          insights: (prev.insights + " | " + response.new_insights).slice(-400),
+          insights: (prev.insights + " | " + response.new_insights).slice(-500),
           lastUpdated: Date.now()
         }));
       }
@@ -116,7 +118,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ user }) => {
           [selectedPersona]: [...(prev[selectedPersona] || []), { 
             id: `err-${Date.now()}`, 
             role: 'assistant', 
-            content: "Có chút trục trặc nhỏ, mình vẫn ở đây lắng nghe bạn nè.", 
+            content: "Kết nối mạng có chút vấn đề, bạn kiểm tra lại hoặc thử nhắn lại cho mình nhé.", 
             timestamp: Date.now() 
           }]
         }));
