@@ -5,8 +5,9 @@ import AuthPage from './components/AuthPage.tsx';
 import Chatbot from './components/Chatbot.tsx';
 import SafeCorner from './components/SafeCorner.tsx';
 import TeacherDashboard from './components/TeacherDashboard.tsx';
+import ProfileSettings from './components/ProfileSettings.tsx';
 import { User } from './types.ts';
-import { MessageSquare, ShieldCheck, BarChart3, LogOut, Heart } from 'lucide-react';
+import { MessageSquare, ShieldCheck, BarChart3, LogOut, Heart, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Navigation = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
@@ -25,22 +26,25 @@ const Navigation = ({ user, onLogout }: { user: User, onLogout: () => void }) =>
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-        <Link to="/" className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/') ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-600 hover:bg-indigo-50'}`}>
+        <Link to="/" className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/') ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-600 hover:bg-indigo-50'}`}>
           <MessageSquare size={18} />
-          <span className="hidden md:inline">Hỗ trợ AI</span>
+          <span className="hidden md:inline">Hỗ trợ</span>
         </Link>
-        <Link to="/safe-corner" className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/safe-corner') ? 'bg-emerald-600 text-white shadow-lg' : 'text-emerald-700 hover:bg-emerald-50'}`}>
+        <Link to="/safe-corner" className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/safe-corner') ? 'bg-emerald-600 text-white shadow-lg' : 'text-emerald-700 hover:bg-emerald-50'}`}>
           <Heart size={18} />
           <span className="hidden md:inline">Góc An Toàn</span>
         </Link>
         {user.role === 'teacher' && (
-          <Link to="/dashboard" className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/dashboard') ? 'bg-amber-500 text-white shadow-lg' : 'text-amber-700 hover:bg-amber-50'}`}>
+          <Link to="/dashboard" className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/dashboard') ? 'bg-amber-500 text-white shadow-lg' : 'text-amber-700 hover:bg-amber-50'}`}>
             <BarChart3 size={18} />
             <span className="hidden md:inline">Dashboard</span>
           </Link>
         )}
-        <div className="flex items-center gap-3 ml-2">
-          <img src={user.avatar} className="w-9 h-9 rounded-full border-2 border-indigo-200 shadow-sm" alt="avatar" />
+        <Link to="/profile" className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 font-bold text-sm ${isActive('/profile') ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-indigo-600 hover:bg-indigo-50'}`}>
+          <Settings size={18} />
+        </Link>
+        <div className="flex items-center gap-3 ml-2 border-l pl-3 border-indigo-100">
+          <img src={user.avatar} className="w-8 h-8 rounded-full border-2 border-indigo-200" alt="avatar" />
           <button onClick={onLogout} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"><LogOut size={20} /></button>
         </div>
       </div>
@@ -63,6 +67,10 @@ const App: React.FC = () => {
     setUser(null);
   };
 
+  const handleUpdateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
   if (isLoading) return <div className="h-screen flex items-center justify-center font-bold text-indigo-600">Đang tải...</div>;
 
   return (
@@ -74,6 +82,7 @@ const App: React.FC = () => {
             <Route path="/auth" element={!user ? <AuthPage onAuth={setUser} /> : <Navigate to="/" />} />
             <Route path="/" element={user ? <Chatbot user={user} /> : <Navigate to="/auth" />} />
             <Route path="/safe-corner" element={user ? <SafeCorner /> : <Navigate to="/auth" />} />
+            <Route path="/profile" element={user ? <ProfileSettings user={user} onUpdate={handleUpdateUser} /> : <Navigate to="/auth" />} />
             <Route path="/dashboard" element={user?.role === 'teacher' ? <TeacherDashboard /> : <Navigate to="/" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
@@ -82,12 +91,8 @@ const App: React.FC = () => {
         <footer className="py-8 text-center border-t border-indigo-100 bg-white/30 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-indigo-400 text-xs font-bold">
-              © 2025 <span className="text-indigo-800 text-sm">Hộp Thư AI</span> <span className="text-[11px] font-medium opacity-60">Trợ Lí Tâm Lí Học Đường</span> • v1.2
+              © 2025 <span className="text-indigo-800 text-sm">Hộp Thư AI</span> • v1.3 • Bảo mật đa lớp
             </p>
-            <div className="flex gap-6 items-center">
-              <a href="https://discordapp.com/users/1006810420037828678" target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-600 text-[10px] font-black uppercase tracking-widest">Hỗ trợ kỹ thuật</a>
-              <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Bảo mật đa lớp</span>
-            </div>
           </div>
         </footer>
       </div>

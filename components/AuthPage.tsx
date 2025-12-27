@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, AlertCircle, Key, UserasIcon, GraduationCap } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Key } from 'lucide-react';
+import { normalizeString } from '../utils/normalize';
 
 interface AuthPageProps {
   onAuth: (user: User) => void;
@@ -32,19 +33,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     setError('');
 
     const normalizedUsername = username.trim().toLowerCase();
+    const normalizedSchool = normalizeString(school);
+    const normalizedClass = normalizeString(className);
     
-    // Kiểm tra các trường cơ bản
     if (!normalizedUsername || !password || (!isLogin && (!school || !className))) {
       setError('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    // CHỈ KIỂM TRA MÃ TRUY CẬP NẾU LÀ GIÁO VIÊN
-    if (role === 'teacher') {
-      if (!accessKey) {
-        setError('Giáo viên cần nhập Mã truy cập để xác thực');
-        return;
-      }
+    if (role === 'teacher' && isLogin === false) {
       if (accessKey !== '36') {
         setError('Mã truy cập giáo viên không chính xác. Liên hệ admin.');
         return;
@@ -57,7 +54,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
       const foundUser = users.find((u: any) => 
         u.username.toLowerCase() === normalizedUsername && 
         u.password === password &&
-        u.role === role // Đảm bảo đăng nhập đúng vai trò
+        u.role === role
       );
 
       if (foundUser) {
@@ -85,8 +82,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         username: username.trim(),
         password,
         role,
-        school: school.trim(),
-        className: className.trim().toUpperCase(),
+        school: normalizedSchool,
+        className: normalizedClass,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username.trim()}`
       };
       
@@ -124,7 +121,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Lựa chọn vai trò ngay từ đầu để điều chỉnh form */}
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Bạn là ai?</label>
             <div className="grid grid-cols-2 gap-3">
@@ -167,57 +163,57 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             />
           </div>
 
-          {/* CHỈ HIỂN THỊ MÃ TRUY CẬP NẾU CHỌN GIÁO VIÊN */}
           <AnimatePresence>
-            {role === 'teacher' && (
+            {!isLogin && (
               <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden space-y-1.5"
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: 'auto' }} 
+                className="space-y-4 pt-2"
               >
-                <div className="flex justify-between items-center px-1">
-                  <label className="block text-[10px] font-black text-indigo-400 uppercase tracking-widest">Mã xác thực Giáo viên</label>
-                  <span className="text-[9px] font-bold text-rose-400 italic">Key test: 36</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Trường</label>
+                    <input 
+                      type="text" 
+                      value={school}
+                      onChange={(e) => setSchool(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 outline-none text-indigo-950 font-bold text-sm"
+                      placeholder="Tên trường..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Lớp</label>
+                    <input 
+                      type="text" 
+                      value={className}
+                      onChange={(e) => setClassName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 outline-none text-indigo-950 font-bold text-sm"
+                      placeholder="Ví dụ: 12A1"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    className="w-full px-5 py-4 pl-12 rounded-2xl bg-amber-50/50 border-2 border-amber-200 focus:border-amber-500 focus:bg-white transition-all outline-none text-indigo-950 font-black"
-                    placeholder="Nhập Key để xác minh..."
-                  />
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500" size={18} />
-                </div>
+
+                {role === 'teacher' && (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="block text-[10px] font-black text-indigo-400 uppercase tracking-widest">Mã xác thực GV</label>
+                      <span className="text-[9px] font-bold text-rose-400 italic">Key test: 36</span>
+                    </div>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={accessKey}
+                        onChange={(e) => setAccessKey(e.target.value)}
+                        className="w-full px-5 py-4 pl-12 rounded-2xl bg-amber-50/50 border-2 border-amber-200 focus:border-amber-500 focus:bg-white transition-all outline-none text-indigo-950 font-black"
+                        placeholder="Nhập Key..."
+                      />
+                      <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500" size={18} />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
-
-          {!isLogin && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Trường</label>
-                <input 
-                  type="text" 
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 outline-none text-indigo-950 font-bold text-sm"
-                  placeholder="Trường..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-indigo-400 uppercase ml-1 tracking-widest">Lớp</label>
-                <input 
-                  type="text" 
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/50 border-2 border-indigo-50 focus:border-indigo-500 outline-none text-indigo-950 font-bold text-sm"
-                  placeholder="Lớp..."
-                />
-              </div>
-            </motion.div>
-          )}
 
           {error && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-rose-600 text-[11px] font-black bg-rose-50 p-4 rounded-2xl border border-rose-100">
