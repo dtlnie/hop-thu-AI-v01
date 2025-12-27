@@ -12,11 +12,15 @@ export const getGeminiStreamResponse = async (
   signal?: AbortSignal
 ) => {
   try {
-    // Vite sẽ thay thế process.env.API_KEY bằng giá trị thực tế lúc build
+    // Lấy API Key từ biến môi trường đã được Vite xử lý
     const apiKey = process.env.API_KEY;
     
     if (!apiKey || apiKey === "undefined" || apiKey === "") {
-      throw new Error("MISSING_API_KEY");
+      return {
+        reply: "⚠️ LỖI HỆ THỐNG: Bot chưa nhận được API Key từ Vercel. Bạn hãy kiểm tra lại mục Environment Variables trên Vercel, đảm bảo tên biến là 'API_KEY' và đã thực hiện REDEPLOY nhé!",
+        riskLevel: RiskLevel.GREEN,
+        new_insights: ""
+      };
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -56,17 +60,8 @@ export const getGeminiStreamResponse = async (
     }
   } catch (error: any) {
     console.error("Lỗi AI:", error);
-    
-    if (error.message === "MISSING_API_KEY") {
-      return {
-        reply: "⚠️ Lỗi: Chưa tìm thấy API Key. Bạn hãy kiểm tra đã thêm 'API_KEY' vào Vercel Environment Variables và thực hiện REDEPLOY chưa nhé!",
-        riskLevel: RiskLevel.GREEN,
-        new_insights: ""
-      };
-    }
-    
     return {
-      reply: "Mình đang gặp chút trục trặc khi kết nối với bộ não AI. Bạn thử nhắn lại sau vài giây hoặc kiểm tra API Key của mình nhé!",
+      reply: "Mình đang gặp chút khó khăn khi kết nối với máy chủ AI. Bạn vui lòng thử lại sau giây lát nhé!",
       riskLevel: RiskLevel.GREEN,
       new_insights: ""
     };
